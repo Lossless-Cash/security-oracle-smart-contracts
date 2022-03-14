@@ -5,23 +5,42 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import "./libraries/TransferHelper.sol";
 
 import "./interfaces/ILosslessSecurityOracle.sol";
-import "./LosslessOracleController.sol";
 
 contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpgradeable, PausableUpgradeable, OwnableUpgradeable {
 
-    ILssOracleController public lssOracleController;
+    IERC20 public subToken;
 
+    uint256 public subFee;
+    uint256 public totalUniqueSubs;
+
+    address public oracle;
+
+    mapping(address => uint256) public subNo;
     mapping(address => uint8) public riskScores;
+    mapping(uint256 => Subscription) subscriptions;
 
-    function initialize(ILssOracleController _controller) public initializer {
+    struct Subscription {
+        uint256 endingBlock;
+        uint256 feeSnapshot;
+        uint256 amount;
+        address payedBy;
+    }
+
+    function initialize(address _oracle, uint256 _subsricption, IERC20 _subToken) public initializer {
         __Ownable_init();
-        setOracleController(_controller);
+        setSubscriptionFee(_subsricption);
+        setSubscriptionToken(_subToken);
+        setOracle(_oracle);
+        totalUniqueSubs = 0;
     }
 
     modifier onlyOracle() {
-        require(msg.sender == address(lssOracleController), "LSS: Only Oracle Controller");
+        require(msg.sender == oracle, "LSS: Only Oracle Controller");
         _;
     }
 
@@ -38,18 +57,38 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     // --- SETTERS --- 
 
     /// @notice This function sets the security oracle address
-    /// @param _controller Lossless Oracle Controller address
-    function setOracleController(ILssOracleController _controller) override public onlyOwner {
-        require(lssOracleController != _controller, "LSS: Cannot set same address");
-        lssOracleController = _controller;
-        emit NewOracleController(lssOracleController);
+    /// @param _oracle Lossless Oracle Controller address
+    function setOracle(address _oracle) override public onlyOwner {
+        require(oracle != _oracle, "LSS: Cannot set same address");
+        oracle = _oracle;
+        emit NewOracle(oracle);
     }
+
+    /// @notice This function sets the new subscription fee
+    /// @param _sub token amount per block
+    function setSubscriptionFee(uint256 _sub) override public onlyOwner {
+        require(subFee != _sub, "LSS: Cannot set same amount");
+        subFee = _sub;
+        emit NewSubscriptionFee(subFee);
+    }
+
+    /// @notice This function sets the subscription token
+    /// @param _token token for subscribe
+    function setSubscriptionToken(IERC20 _token) override public onlyOwner {
+        require(subToken != _token, "LSS: Cannot set same token");
+        subToken = _token;
+        emit NewSubscriptionToken(subToken);
+    }
+
+    // --- RISK MANAGEMENT ---
 
     /// @notice This function sets the risk scorefor an address
     /// @param _addresses Lossless Oracle Controller address
     /// @param _scores Lossless Oracle Controller address
     function setRiskScores(address[] memory _addresses, uint8[] memory _scores) override public onlyOracle {
         uint256 listLen = _addresses.length;
+
+        require(listLen == _scores.length, "LSS: Arrays do not match");
 
         for(uint256 i = 0; i < listLen;) {
             address updatedAddress = _addresses[i];
@@ -62,15 +101,91 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
             unchecked {i++;}
         }
     }
-
     // --- GETTERS ---
+
     /// @notice This function returns the risk score of an address
     /// @param _address address to check
     function getRiskScore(address _address) override public view returns(uint8) {
-        if (!lssOracleController.getIsSubscribed(msg.sender)) {
+        if (!getIsSubscribed(msg.sender)) {
             return 0;
         } else {
             return riskScores[_address];
         }
+    }
+
+    /// @notice This function returns if an address is subsribed
+    /// @param _address address to verify
+    function getIsSubscribed(address _address) override public view returns(bool) {
+        return(block.number <= subscriptions[subNo[_address]].endingBlock);
+    }
+
+// --- SUBSCRIPTIONS ---
+
+    /// @notice This function starts a new subscription
+    /// @param _address address to subscribe
+    /// @param _blocks amount of blocks to subscribe
+    function subscribe(address _address, uint256 _blocks) override public {
+        require(_address != address(0), "LSS: Cannot sub zero address");
+
+        if (subNo[_address] == 0){
+            totalUniqueSubs += 1;
+            subNo[_address] = totalUniqueSubs;
+        }
+
+        Subscription storage sub = subscriptions[subNo[_address]];
+        require(block.number >= sub.endingBlock, "LSS: Already subscribed");
+
+        uint256 amountToPay = _blocks * subFee;
+
+        TransferHelper.safeTransferFrom(address(subToken), msg.sender, address(this), amountToPay);
+
+        sub.endingBlock = block.number + _blocks;
+        sub.feeSnapshot = subFee;
+        sub.payedBy = msg.sender;
+        sub.amount = amountToPay;
+
+        emit NewSubscription(_address, _blocks);
+    }
+
+    /// @notice This function cancels a subscription
+    /// @param _address address to unsubscribe
+    function cancelSubscription(address _address) override public {
+        Subscription storage sub = subscriptions[subNo[_address]];
+        require(block.number < sub.endingBlock, "LSS: Not subscribed");
+        require(sub.payedBy == msg.sender, "LSS: Must have payed for sub");
+
+        uint256 _returnAmount = (sub.endingBlock - block.number) * sub.feeSnapshot;
+
+        sub.endingBlock = block.number;
+        sub.amount -= _returnAmount;
+        sub.feeSnapshot = 0;
+
+        TransferHelper.safeTransfer(address(subToken), msg.sender, _returnAmount);
+
+        emit NewCancellation(_address);
+    }
+
+    /// @notice This withdraws all the tokens from previous 
+    function withdrawTokens() override public onlyOwner returns(uint256) {
+        uint256 withdrawPool = 0;
+
+        for (uint256 i = 0; i <= totalUniqueSubs;) {
+            Subscription storage sub = subscriptions[i];
+
+            if (block.number > sub.endingBlock) {
+                withdrawPool += sub.amount;
+                sub.amount = 0;
+            } else {
+                uint256 remaining = (sub.endingBlock - block.number) * sub.feeSnapshot;
+                withdrawPool = sub.amount - remaining;
+                sub.amount = remaining; 
+            }
+            unchecked {i++;}
+        }
+
+        TransferHelper.safeTransfer(address(subToken), msg.sender, withdrawPool);
+
+        emit NewWithdrawal(withdrawPool);
+        return(withdrawPool);
     }
 }
