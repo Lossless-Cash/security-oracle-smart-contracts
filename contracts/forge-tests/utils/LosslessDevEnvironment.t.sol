@@ -77,4 +77,22 @@ contract LosslessDevEnvironment is DSTest {
 
         return subAmount;
     }
+
+
+    /// @notice Generates a subscription
+    function extendSubscription(address _payer, address _sub, uint128 _blocks) public returns(uint256){
+        uint256 extendAmount = _blocks * subscriptionFee;
+        
+        evm.prank(erc20Admin);
+        erc20Token.transfer(_payer, extendAmount);
+
+        evm.startPrank(_payer);
+        erc20Token.approve(address(securityOracle), extendAmount);
+
+        securityOracle.extendSubscription(_sub, _blocks);      
+        
+        evm.stopPrank();  
+
+        return extendAmount;
+    }
 }

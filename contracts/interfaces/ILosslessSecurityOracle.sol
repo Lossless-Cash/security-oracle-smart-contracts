@@ -11,7 +11,7 @@ interface ILssSecurityOracle {
     function withdrawTokens() external returns(uint256);
 
     function subscribe(address _address, uint256 _blocks) external;
-    function cancelSubscription(address _address) external;
+    function extendSubscription(address _address, uint256 _blocks) external;
 
     function getIsSubscribed(address _address) external view returns(bool);
     function getRiskScore(address _address) external returns (uint8);
@@ -20,7 +20,7 @@ interface ILssSecurityOracle {
     event NewSubscriptionFee(uint256 indexed _subFee);
     event NewSubscriptionToken(IERC20 indexed _subToken);
     event NewSubscription(address indexed _address, uint256 indexed _blocks);
-    event NewCancellation(address indexed _address);
+    event NewSubscriptionExtension(address indexed _address, uint256 indexed _blocks);
     event NewWithdrawal(uint256 indexed _withdrawPool);
     event NewOracle(address indexed _oracle);
     event NewRiskScore(address indexed _updatedAddress, uint8 indexed _updatedScore);

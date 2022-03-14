@@ -26,9 +26,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
 
     struct Subscription {
         uint256 endingBlock;
-        uint256 feeSnapshot;
         uint256 amount;
-        address payedBy;
     }
 
     function initialize(address _oracle, uint256 _subsricption, IERC20 _subToken) public initializer {
@@ -126,22 +124,18 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     /// @param _blocks amount of blocks to subscribe
     function subscribe(address _address, uint256 _blocks) override public {
         require(_address != address(0), "LSS: Cannot sub zero address");
+        require(subNo[_address] == 0, "LSS: Already subscribed, extend");
 
-        if (subNo[_address] == 0){
-            totalUniqueSubs += 1;
-            subNo[_address] = totalUniqueSubs;
-        }
+        totalUniqueSubs += 1;
+        subNo[_address] = totalUniqueSubs;
 
         Subscription storage sub = subscriptions[subNo[_address]];
-        require(block.number >= sub.endingBlock, "LSS: Already subscribed");
 
         uint256 amountToPay = _blocks * subFee;
 
         TransferHelper.safeTransferFrom(address(subToken), msg.sender, address(this), amountToPay);
 
         sub.endingBlock = block.number + _blocks;
-        sub.feeSnapshot = subFee;
-        sub.payedBy = msg.sender;
         sub.amount = amountToPay;
 
         emit NewSubscription(_address, _blocks);
@@ -149,21 +143,21 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
 
     /// @notice This function cancels a subscription
     /// @param _address address to unsubscribe
-    function cancelSubscription(address _address) override public {
+    function extendSubscription(address _address, uint256 _blocks) override public {
         Subscription storage sub = subscriptions[subNo[_address]];
-        require(block.number < sub.endingBlock, "LSS: Not subscribed");
-        require(sub.payedBy == msg.sender, "LSS: Must have payed for sub");
+        require(sub.endingBlock != 0, "LSS: Not subscribed");
+        require((block.number + _blocks) >= sub.endingBlock, "LSS: Extension period covered");
 
-        uint256 _returnAmount = (sub.endingBlock - block.number) * sub.feeSnapshot;
+        uint256 amountToPay = _blocks * subFee;
 
-        sub.endingBlock = block.number;
-        sub.amount -= _returnAmount;
-        sub.feeSnapshot = 0;
+        TransferHelper.safeTransferFrom(address(subToken), msg.sender, address(this), amountToPay);
 
-        TransferHelper.safeTransfer(address(subToken), msg.sender, _returnAmount);
+        sub.endingBlock = block.number + _blocks;
+        sub.amount += amountToPay;
 
-        emit NewCancellation(_address);
+        emit NewSubscriptionExtension(_address, _blocks);
     }
+
 
     /// @notice This withdraws all the tokens from previous 
     function withdrawTokens() override public onlyOwner returns(uint256) {
@@ -172,13 +166,9 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
         for (uint256 i = 0; i <= totalUniqueSubs;) {
             Subscription storage sub = subscriptions[i];
 
-            if (block.number > sub.endingBlock) {
+            if (sub.amount != 0) {
                 withdrawPool += sub.amount;
                 sub.amount = 0;
-            } else {
-                uint256 remaining = (sub.endingBlock - block.number) * sub.feeSnapshot;
-                withdrawPool = sub.amount - remaining;
-                sub.amount = remaining; 
             }
             unchecked {i++;}
         }

@@ -80,35 +80,6 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
             evm.stopPrank();
         }
     }
-    
-
-    /// @notice Test getting risk scores before and after cancelling sub
-    /// @notice should not revert but return 0
-        function testSecurityOracleGetRiskSubCancel(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
-        evm.assume(_getScore <= _addresses.length);
-        evm.assume(_getScore <= _scores.length);
-        evm.assume(_blocks > 10);
-        evm.assume(_blocks < type(uint128).max - 100);
-        
-        if (_addresses.length == _scores.length) {
-            setUpStartingPoint(_payer, _sub, _blocks, _addresses, _scores, true);
-            
-            evm.roll(_blocks);
-            evm.prank(_sub);
-            uint8 riskScore = securityOracle.getRiskScore(_addresses[_getScore]);
-
-            assertEq(riskScore, _scores[_getScore]);
-
-            evm.prank(_payer);
-            securityOracle.cancelSubscription(_sub);
-
-            evm.roll(10);
-            evm.prank(_sub);
-            riskScore = securityOracle.getRiskScore(_addresses[_getScore]);
-
-            assertEq(riskScore, 0);
-        }
-    }
 
     /// @notice Test Subscription Fee Set up
     /// @dev Should not revert
@@ -171,69 +142,10 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
         evm.startPrank(_payer);
         erc20Token.approve(address(securityOracle), subAmount);
 
-        evm.expectRevert("LSS: Already subscribed");
+        evm.expectRevert("LSS: Already subscribed, extend");
         securityOracle.subscribe(_sub, _blocks);      
         
         evm.stopPrank();  
-    }
-
-    /// @notice Test unsubscribe
-    /// @dev Should not revert
-    function testSecurityOraclerSubscriptionCancel(address _payer, address _sub, uint128 _blocks, uint128 _cancelBlock) public notZero(_payer) notZero(_sub){
-        if (_cancelBlock < _blocks && _cancelBlock > 0) {
-            uint256 endingBlock = block.number + _blocks;
-
-            generateSubscription(_payer, _sub, _blocks);
-
-            evm.roll(_cancelBlock);
-            uint256 _toReturn = (endingBlock - block.number) * subscriptionFee;
-
-            evm.prank(_payer);
-            securityOracle.cancelSubscription(_sub);
-
-            assertEq(erc20Token.balanceOf(_payer), _toReturn);
-        }
-    }
-
-    /// @notice Test unsubscribe after time has passed
-    /// @dev Should revert
-    function testSecurityOraclerSubscriptionCancelExpired(address _payer, address _sub, uint128 _blocks) public notZero(_payer) notZero(_sub) {
-        generateSubscription(_payer, _sub, _blocks);
-
-        evm.roll(_blocks);
-
-        evm.prank(_payer);
-        evm.expectRevert("LSS: Not subscribed");
-        securityOracle.cancelSubscription(_sub);
-    }
-
-
-    /// @notice Test unsubscribe by non payer
-    /// @dev Should revert
-    function testSecurityOraclerSubscriptionCancelNonPayer(address _payer, address _sub, uint128 _blocks, uint128 _cancelBlock) public notZero(_payer) notZero(_sub) {
-        if (_cancelBlock < _blocks && _cancelBlock > 0) {
-
-            uint256 endingBlock = block.number + _blocks;
-
-            generateSubscription(_payer, _sub, _blocks);
-
-            evm.roll(_cancelBlock);
-
-            evm.prank(address(999));
-            evm.expectRevert("LSS: Must have payed for sub");
-            securityOracle.cancelSubscription(_sub);
-        }
-    }
-
-    /// @notice Test unsubscribe non subbed
-    /// @dev Should revert
-    function testSecurityOraclerSubscriptionCancelNonSubbed(address _payer, address _sub, uint128 _blocks, uint256 _cancelBlock) public notZero(_payer) notZero(_sub){
-        evm.roll(10);
-        if (_cancelBlock < _blocks && _cancelBlock > 0) {
-            evm.prank(_payer);
-            evm.expectRevert("LSS: Not subscribed");
-            securityOracle.cancelSubscription(_sub);
-        }
     }
 
     /// @notice Test set risk scores
@@ -304,133 +216,163 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
         evm.prank(securityOwner);
         uint256 withdrawed = securityOracle.withdrawTokens();
 
-        assertEq(erc20Token.balanceOf(securityOwner), subAmount/2);
-        assertEq(withdrawed, subAmount/2);
+        assertEq(erc20Token.balanceOf(securityOwner), subAmount);
+        assertEq(withdrawed, subAmount);
     }
 
-    /// @notice Test withdraw middle of a cycle then cancel sub
+    /// @notice Test subscription extension
     /// @dev Should not revert
-    function testSecurityOraclerWithdrawMidCycleThenCancel(address _payer, address _sub, uint128 _blocks, uint128 _cancelBlock) public notZero(_payer) notZero(_sub) notOwner(_payer){
-
+    function testSecurityOracleExtendSub(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
         evm.assume(_blocks > 10);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_cancelBlock > 11);
-        evm.assume(_cancelBlock < _blocks);
-        
-        uint256 endingBlock = block.number + _blocks;
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
-
         assert(securityOracle.getIsSubscribed(_sub));
 
-        evm.roll(_cancelBlock);
-        uint256 _toReturn = (endingBlock - block.number) * subscriptionFee;
-        uint256 _toWithdraw = subAmount - _toReturn;
+        evm.roll(_blocks + 1);
+        assert(!securityOracle.getIsSubscribed(_sub));
+
+        extendSubscription(_payer, _sub, _extension);
+
+        assert(securityOracle.getIsSubscribed(_sub));
+    }
+
+    /// @notice Test subscription extension for non subscribed
+    /// @dev Should revert
+    function testSecurityOracleExtendSubNonSubbed(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
+        evm.assume(_blocks > 10);
+        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
+    
+       evm.expectRevert("LSS: Not subscribed");
+       securityOracle.extendSubscription(_sub, _extension);
+    }
+
+    /// @notice Test subscription extension by anyone
+    /// @dev Should not revert
+    function testSecurityOracleExtendSubByAnyone(address _payer, address _sub, uint128 _blocks, uint128 _extension, address _extender) public notZero(_payer) notZero(_sub) notOwner(_payer){
+        evm.assume(_extender != _payer);
+        evm.assume(_blocks > 10);
+        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
+        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.roll(_blocks + 1);
+        assert(!securityOracle.getIsSubscribed(_sub));
+
+        extendSubscription(_extender, _sub, _extension);
+
+        assert(securityOracle.getIsSubscribed(_sub));
+    }
+
+    /// @notice Test subscription extension multiple times
+    /// @dev Should not revert
+    function testSecurityOracleExtendSubMultiple(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
+        evm.assume(_blocks > 10);
+        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
+        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.roll(_blocks + 1);
+        assert(!securityOracle.getIsSubscribed(_sub));
+
+        extendSubscription(_payer, _sub, _extension);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.roll(_blocks + _extension + 100);
+        extendSubscription(_payer, _sub, _extension);
+        assert(securityOracle.getIsSubscribed(_sub));
+    }
+
+    /// @notice Test subscription extension on already extended period
+    /// @dev Should revert
+    function testSecurityOracleExtendSubSamePeriod(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
+        evm.assume(_blocks > 10);
+        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
+
+        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.roll(_blocks + 1);
+        assert(!securityOracle.getIsSubscribed(_sub));
+
+        extendSubscription(_payer, _sub, _extension);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.startPrank(_payer);
+        evm.expectRevert("LSS: Extension period covered");
+        securityOracle.extendSubscription(_sub, _extension/2);      
+    }
+    
+    /// @notice Test withdraw before and after extension
+    /// @dev Should not revert
+    function testSecurityOracleExtendSubWithdrawing(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
+        evm.assume(_blocks > 10);
+        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
+
+        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
+        assert(securityOracle.getIsSubscribed(_sub));
 
         evm.prank(securityOwner);
         uint256 withdrawed = securityOracle.withdrawTokens();
 
-        assertEq(erc20Token.balanceOf(securityOwner), _toWithdraw);
-        assertEq(withdrawed, _toWithdraw);
-        evm.prank(_payer);
-        securityOracle.cancelSubscription(_sub);
+        assertEq(erc20Token.balanceOf(securityOwner), subAmount);
+        assertEq(withdrawed, subAmount);
 
-        assertEq(erc20Token.balanceOf(_payer), _toReturn);
+        evm.roll(_blocks + 1);
+        assert(!securityOracle.getIsSubscribed(_sub));
+
+        uint256 extendAmount = extendSubscription(_payer, _sub, _extension);
+        
+        evm.prank(securityOwner);
+        uint256 withdrawedExt = securityOracle.withdrawTokens();
+
+        assertEq(erc20Token.balanceOf(securityOwner), subAmount + extendAmount);
+        assertEq(withdrawedExt, extendAmount);
     }
 
-    /// @notice Test withdraw middle of a cycle then cancel sub with fee change
+    /// @notice Test withdraw before and after extension with fee change
     /// @dev Should not revert
-    function testSecurityOraclerWithdrawMidCycleThenCancelFeeChange(address _payer, address _sub, uint128 _blocks, uint128 _cancelBlock, uint256 _newFee) public notZero(_payer) notZero(_sub) notOwner(_payer){
-
+    function testSecurityOracleExtendSubWithdrawing(address _payer, address _sub, uint128 _blocks, uint128 _extension, uint128 _newFee) public notZero(_payer) notZero(_sub) notOwner(_payer){
         evm.assume(_blocks > 10);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_cancelBlock > 11);
-        evm.assume(_cancelBlock < _blocks);
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
         evm.assume(_newFee != subscriptionFee);
+        evm.assume(_newFee > 0);
+
+        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.prank(securityOwner);
+        uint256 withdrawed = securityOracle.withdrawTokens();
+
+        assertEq(erc20Token.balanceOf(securityOwner), subAmount);
+        assertEq(withdrawed, subAmount);
+
+        subscriptionFee = _newFee;
+        evm.prank(securityOwner);
+        securityOracle.setSubscriptionFee(subscriptionFee);
+
+        evm.roll(_blocks + 1);
+        assert(!securityOracle.getIsSubscribed(_sub));
+
+        uint256 extendAmount = extendSubscription(_payer, _sub, _extension);
         
-        uint256 endingBlock = block.number + _blocks;
-        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
-
-        assert(securityOracle.getIsSubscribed(_sub));
-
         evm.prank(securityOwner);
-        securityOracle.setSubscriptionFee(_newFee);
+        uint256 withdrawedExt = securityOracle.withdrawTokens();
 
-        evm.roll(_cancelBlock);
-        uint256 _toReturn = (endingBlock - block.number) * subscriptionFee;
-        uint256 _toWithdraw = subAmount - _toReturn;
-
-        evm.prank(securityOwner);
-        uint256 withdrawed = securityOracle.withdrawTokens();
-
-        assertEq(erc20Token.balanceOf(securityOwner), _toWithdraw);
-        assertEq(withdrawed, _toWithdraw);
-        evm.prank(_payer);
-        securityOracle.cancelSubscription(_sub);
-
-        assertEq(erc20Token.balanceOf(_payer), _toReturn);
-    }
-
-    /// @notice Test withdraw cancel sub mid cycle then withdraw
-    /// @dev Should not revert
-    function testSecurityOraclerCancelMidCycleThenWithdraw(address _payer, address _sub, uint128 _blocks, uint128 _cancelBlock) public notZero(_payer) notZero(_sub) notOwner(_payer){
-
-        evm.assume(_blocks > 10);
-        evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_cancelBlock > 11);
-        evm.assume(_cancelBlock < _blocks);
-        
-        uint256 endingBlock = block.number + _blocks;
-        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
-
-        assert(securityOracle.getIsSubscribed(_sub));
-
-        evm.roll(_cancelBlock);
-        uint256 _toReturn = (endingBlock - block.number) * subscriptionFee;
-        uint256 _toWithdraw = subAmount - _toReturn;
-
-        evm.prank(_payer);
-        securityOracle.cancelSubscription(_sub);
-
-        assertEq(erc20Token.balanceOf(_payer), _toReturn);
-
-        evm.prank(securityOwner);
-        uint256 withdrawed = securityOracle.withdrawTokens();
-
-        assertEq(erc20Token.balanceOf(securityOwner), _toWithdraw);
-        assertEq(withdrawed, _toWithdraw);
-    }
-
-    /// @notice Test withdraw cancel sub mid cycle then withdraw with sub change
-    /// @dev Should not revert
-    function testSecurityOraclerCancelMidCycleThenWithdrawFeeChange(address _payer, address _sub, uint128 _blocks, uint128 _cancelBlock, uint256 _newFee) public notZero(_payer) notZero(_sub) notOwner(_payer){
-
-        evm.assume(_blocks > 10);
-        evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_cancelBlock > 11);
-        evm.assume(_cancelBlock < _blocks);
-        evm.assume(_newFee != subscriptionFee);
-
-        uint256 endingBlock = block.number + _blocks;
-        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
-
-        assert(securityOracle.getIsSubscribed(_sub));
-
-        evm.prank(securityOwner);
-        securityOracle.setSubscriptionFee(_newFee);
-
-        evm.roll(_cancelBlock);
-        uint256 _toReturn = (endingBlock - block.number) * subscriptionFee;
-        uint256 _toWithdraw = subAmount - _toReturn;
-
-        evm.prank(_payer);
-        securityOracle.cancelSubscription(_sub);
-
-        assertEq(erc20Token.balanceOf(_payer), _toReturn);
-
-        evm.prank(securityOwner);
-        uint256 withdrawed = securityOracle.withdrawTokens();
-
-        assertEq(erc20Token.balanceOf(securityOwner), _toWithdraw);
-        assertEq(withdrawed, _toWithdraw);
+        assertEq(erc20Token.balanceOf(securityOwner), subAmount + extendAmount);
+        assertEq(withdrawedExt, extendAmount);
     }
 }
