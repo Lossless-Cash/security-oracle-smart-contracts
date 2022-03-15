@@ -19,8 +19,6 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     uint256 public subFee;
     uint256 public totalUniqueSubs;
 
-    address public oracle;
-
     mapping(address => uint256) public subNo;
     mapping(address => uint8) public riskScores;
     mapping(uint256 => Subscription) subscriptions;
@@ -63,7 +61,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     function addOracle(address _oracle) override public onlyOwner {
         require(!hasRole(ORACLE, _oracle), "LSS: Cannot set same address");
         grantRole(ORACLE, _oracle);
-        emit NewOracle(oracle);
+        emit NewOracle(_oracle);
     }
 
     /// @notice This function sets the security oracle address
@@ -71,7 +69,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     function removeOracle(address _oracle) override public onlyOwner {
         require(hasRole(ORACLE, _oracle), "LSS: Not Oracle");
         revokeRole(ORACLE, _oracle);
-        emit NewOracleRemoved(oracle);
+        emit NewOracleRemoved(_oracle);
     }
 
     /// @notice This function sets the new subscription fee
