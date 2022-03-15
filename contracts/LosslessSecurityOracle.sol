@@ -114,6 +114,9 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     /// @notice This function returns if an address is subsribed
     /// @param _address address to verify
     function getIsSubscribed(address _address) override public view returns(bool) {
+        if (subFee == 0) {
+            return true;
+        }
         return(block.number <= subscriptions[subNo[_address]].endingBlock);
     }
 
@@ -146,13 +149,17 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     function extendSubscription(address _address, uint256 _blocks) override public {
         Subscription storage sub = subscriptions[subNo[_address]];
         require(sub.endingBlock != 0, "LSS: Not subscribed");
-        require((block.number + _blocks) >= sub.endingBlock, "LSS: Extension period covered");
 
         uint256 amountToPay = _blocks * subFee;
 
         TransferHelper.safeTransferFrom(address(subToken), msg.sender, address(this), amountToPay);
 
-        sub.endingBlock = block.number + _blocks;
+        if (block.number <= sub.endingBlock) {
+            sub.endingBlock += _blocks;
+        } else {
+            sub.endingBlock = block.number + _blocks;
+        }
+        
         sub.amount += amountToPay;
 
         emit NewSubscriptionExtension(_address, _blocks);

@@ -5,6 +5,13 @@ import "./utils/LosslessDevEnvironment.t.sol";
 
 contract LosslessSecurityOracleTests is LosslessDevEnvironment {
 
+    modifier zeroFee(){
+        evm.prank(securityOwner);
+        subscriptionFee = 0;
+        securityOracle.setSubscriptionFee(subscriptionFee);
+        _;
+    }
+
     /// @notice Generate risk scores and sub
     function setUpStartingPoint(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, bool _subbed) public {
         // Set risk scores
@@ -289,28 +296,6 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
         extendSubscription(_payer, _sub, _extension);
         assert(securityOracle.getIsSubscribed(_sub));
     }
-
-    /// @notice Test subscription extension on already extended period
-    /// @dev Should revert
-    function testSecurityOracleExtendSubSamePeriod(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
-        evm.assume(_blocks > 10);
-        evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
-        evm.assume(_extension < type(uint128).max - 100);
-
-        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
-        assert(securityOracle.getIsSubscribed(_sub));
-
-        evm.roll(_blocks + 1);
-        assert(!securityOracle.getIsSubscribed(_sub));
-
-        extendSubscription(_payer, _sub, _extension);
-        assert(securityOracle.getIsSubscribed(_sub));
-
-        evm.startPrank(_payer);
-        evm.expectRevert("LSS: Extension period covered");
-        securityOracle.extendSubscription(_sub, _extension/2);      
-    }
     
     /// @notice Test withdraw before and after extension
     /// @dev Should not revert
@@ -374,5 +359,71 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
 
         assertEq(erc20Token.balanceOf(securityOwner), subAmount + extendAmount);
         assertEq(withdrawedExt, extendAmount);
+    }
+
+    /// @notice Test subscription with zero fee
+    /// @dev Should not revert
+    function testSecurityOraclerSubscriptionZeroFee(address _payer, address _sub, uint128 _blocks) public notZero(_payer) notZero(_sub) zeroFee() {
+        generateSubscription(_payer, _sub, _blocks);
+        assert(securityOracle.getIsSubscribed(_sub));
+    }
+
+
+    /// @notice Test subscription extension with zero fee
+    /// @dev Should not revert
+    function testSecurityOracleExtendSubZeroFee(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer) zeroFee() {
+        evm.assume(_blocks > 10);
+        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
+        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.roll(_blocks + 1);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        extendSubscription(_payer, _sub, _extension);
+
+        assert(securityOracle.getIsSubscribed(_sub));
+    }
+
+    /// @notice Test subscription extension by anyone with zero fee
+    /// @dev Should not revert
+    function testSecurityOracleExtendSubByAnyoneZeroFee(address _payer, address _sub, uint128 _blocks, uint128 _extension, address _extender) public notZero(_payer) notZero(_sub) notOwner(_payer) zeroFee() {
+        evm.assume(_extender != _payer);
+        evm.assume(_blocks > 10);
+        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
+        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.roll(_blocks + 1);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        extendSubscription(_extender, _sub, _extension);
+
+        assert(securityOracle.getIsSubscribed(_sub));
+    }
+
+    /// @notice Test subscription extension multiple times with zero fee
+    /// @dev Should not revert
+    function testSecurityOracleExtendSubMultipleZeroFee(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer) zeroFee() {
+        evm.assume(_blocks > 10);
+        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_extension > 0);
+        evm.assume(_extension < type(uint128).max - 100);
+        uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.roll(_blocks + 1);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        extendSubscription(_payer, _sub, _extension);
+        assert(securityOracle.getIsSubscribed(_sub));
+
+        evm.roll(_blocks + _extension + 100);
+        extendSubscription(_payer, _sub, _extension);
+        assert(securityOracle.getIsSubscribed(_sub));
     }
 }
