@@ -19,6 +19,19 @@
         {
           "indexed": true,
           "internalType": "address",
+          "name": "_oracle",
+          "type": "address"
+        }
+      ],
+      "name": "NewOracleRemoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
           "name": "_updatedAddress",
           "type": "address"
         },
@@ -126,6 +139,19 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "_oracle",
+          "type": "address"
+        }
+      ],
+      "name": "addOracle",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "_address",
           "type": "address"
         },
@@ -186,7 +212,7 @@
           "type": "address"
         }
       ],
-      "name": "setOracle",
+      "name": "removeOracle",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

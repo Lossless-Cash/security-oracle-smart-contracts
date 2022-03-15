@@ -37,7 +37,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         setSubscriptionFee(_subsricption);
         setSubscriptionToken(_subToken);
-        setOracle(_oracle);
+        addOracle(_oracle);
         totalUniqueSubs = 0;
     }
 
@@ -60,10 +60,18 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
 
     /// @notice This function sets the security oracle address
     /// @param _oracle Lossless Oracle Controller address
-    function setOracle(address _oracle) override public onlyOwner {
+    function addOracle(address _oracle) override public onlyOwner {
         require(!hasRole(ORACLE, _oracle), "LSS: Cannot set same address");
         grantRole(ORACLE, _oracle);
         emit NewOracle(oracle);
+    }
+
+    /// @notice This function sets the security oracle address
+    /// @param _oracle Lossless Oracle Controller address
+    function removeOracle(address _oracle) override public onlyOwner {
+        require(hasRole(ORACLE, _oracle), "LSS: Not Oracle");
+        revokeRole(ORACLE, _oracle);
+        emit NewOracleRemoved(oracle);
     }
 
     /// @notice This function sets the new subscription fee
