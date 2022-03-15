@@ -69,6 +69,55 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     }
 
 
+    /// @notice Test adding oracle
+    /// @notice should not revert
+    function testSecurityOracleAddOracle(address _newOracle) public {
+        evm.assume(_newOracle != oracle);
+        evm.prank(securityOwner);
+        securityOracle.addOracle(_newOracle);
+    }
+
+    /// @notice Test adding oracle same address
+    /// @notice should revert
+    function testSecurityOracleAddOracleSameAddress() public {
+        evm.prank(securityOwner);
+        evm.expectRevert("LSS: Cannot set same address");
+        securityOracle.addOracle(oracle);
+    }
+
+    /// @notice Test removing oracle
+    /// @notice should not revert
+    function testSecurityOracleRemoveOracle() public {
+        evm.prank(securityOwner);
+        securityOracle.removeOracle(oracle);
+    }
+
+    /// @notice Test removing non existing
+    /// @notice should revert
+    function testSecurityOracleRemoveOracleNonExisting(address _newOracle) public {
+        evm.assume(_newOracle != oracle);
+        evm.prank(securityOwner);
+        evm.expectRevert("LSS: Not Oracle");
+        securityOracle.removeOracle(_newOracle);
+    }
+
+    /// @notice Test adding oracle by non owner
+    /// @notice should revert
+    function testSecurityOracleAddOracleNonOwner(address _impersonator, address _newOracle) public notOwner(_impersonator) {
+        evm.assume(_newOracle != oracle);
+        evm.prank(_impersonator);
+        evm.expectRevert("Ownable: caller is not the owner");
+        securityOracle.addOracle(_newOracle);
+    }
+
+    /// @notice Test removing oracle by non owner
+    /// @notice should revert
+    function testSecurityOracleRemoveOracleNonOwner(address _impersonator) public notOwner(_impersonator) {
+        evm.prank(_impersonator);
+        evm.expectRevert("Ownable: caller is not the owner");
+        securityOracle.removeOracle(oracle);
+    }
+
     /// @notice Test getting risk scores without subscription
     /// @notice should not revert but return 0
     function testSecurityOracleGetRiskSubNone(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, uint256 _getScore) public notZero(_payer) notZero(_sub) {

@@ -16,7 +16,6 @@ contract EnvironmentTests is LosslessDevEnvironment {
     /// @notice Test deployed Security Oracle
     function testSecurityOracleSetUp() public {
         assertEq(securityOwner, securityOracle.owner());
-        assertEq(oracle, securityOracle.oracle());
         assertEq(securityOracle.subFee(), subscriptionFee);
         assertEq(address(securityOracle.subToken()), address(erc20Token));
     }

@@ -5,20 +5,19 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./libraries/TransferHelper.sol";
 
 import "./interfaces/ILosslessSecurityOracle.sol";
 
-contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpgradeable, PausableUpgradeable, OwnableUpgradeable {
+contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpgradeable, PausableUpgradeable, OwnableUpgradeable, AccessControlUpgradeable {
 
     IERC20 public subToken;
 
     uint256 public subFee;
     uint256 public totalUniqueSubs;
-
-    address public oracle;
 
     mapping(address => uint256) public subNo;
     mapping(address => uint8) public riskScores;
@@ -29,16 +28,19 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
         uint256 amount;
     }
 
+    bytes32 public constant ORACLE = keccak256("ORACLE");
+
     function initialize(address _oracle, uint256 _subsricption, IERC20 _subToken) public initializer {
         __Ownable_init();
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         setSubscriptionFee(_subsricption);
         setSubscriptionToken(_subToken);
-        setOracle(_oracle);
+        addOracle(_oracle);
         totalUniqueSubs = 0;
     }
 
     modifier onlyOracle() {
-        require(msg.sender == oracle, "LSS: Only Oracle Controller");
+        require(hasRole(ORACLE, msg.sender), "LSS: Only Oracle Controller");
         _;
     }
 
@@ -56,10 +58,18 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
 
     /// @notice This function sets the security oracle address
     /// @param _oracle Lossless Oracle Controller address
-    function setOracle(address _oracle) override public onlyOwner {
-        require(oracle != _oracle, "LSS: Cannot set same address");
-        oracle = _oracle;
-        emit NewOracle(oracle);
+    function addOracle(address _oracle) override public onlyOwner {
+        require(!hasRole(ORACLE, _oracle), "LSS: Cannot set same address");
+        grantRole(ORACLE, _oracle);
+        emit NewOracle(_oracle);
+    }
+
+    /// @notice This function sets the security oracle address
+    /// @param _oracle Lossless Oracle Controller address
+    function removeOracle(address _oracle) override public onlyOwner {
+        require(hasRole(ORACLE, _oracle), "LSS: Not Oracle");
+        revokeRole(ORACLE, _oracle);
+        emit NewOracleRemoved(_oracle);
     }
 
     /// @notice This function sets the new subscription fee
