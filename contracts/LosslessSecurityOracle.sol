@@ -30,10 +30,10 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
 
     bytes32 public constant ORACLE = keccak256("ORACLE");
 
-    function initialize(address _oracle, uint256 _subsricption, IERC20 _subToken) public initializer {
+    function initialize(address _oracle, uint256 _subscription, IERC20 _subToken) public initializer {
         __Ownable_init();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        setSubscriptionFee(_subsricption);
+        setSubscriptionFee(_subscription);
         setSubscriptionToken(_subToken);
         addOracle(_oracle);
         totalUniqueSubs = 0;
@@ -93,7 +93,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     /// @notice This function sets the risk scorefor an address
     /// @param _addresses Lossless Oracle Controller address
     /// @param _scores Lossless Oracle Controller address
-    function setRiskScores(address[] memory _addresses, uint8[] memory _scores) override public onlyOracle {
+    function setRiskScores(address[] calldata _addresses, uint8[] calldata _scores) override public onlyOracle {
         uint256 listLen = _addresses.length;
 
         require(listLen == _scores.length, "LSS: Arrays do not match");
