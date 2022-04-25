@@ -24,6 +24,6 @@ interface ILssSecurityOracle {
     event NewSubscriptionExtension(address indexed _address, uint256 indexed _blocks);
     event NewWithdrawal(uint256 indexed _withdrawPool);
     event NewOracle(address indexed _oracle);
-    event NewOracleRemoved(address indexed _oracle);
+    event NewOracleRemoval(address indexed _oracle);
     event NewRiskScore(address indexed _updatedAddress, uint8 indexed _updatedScore);
 }
