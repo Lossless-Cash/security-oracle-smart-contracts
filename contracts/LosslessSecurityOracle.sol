@@ -193,6 +193,6 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
         TransferHelper.safeTransfer(address(subToken), msg.sender, withdrawPool);
 
         emit NewWithdrawal(withdrawPool);
-        return(withdrawPool);
+        return withdrawPool;
     }
 }
