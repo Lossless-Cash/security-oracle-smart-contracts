@@ -64,12 +64,12 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
         emit NewOracle(_oracle);
     }
 
-    /// @notice This function sets the security oracle address
+    /// @notice This function removes an oracle
     /// @param _oracle Lossless Oracle Controller address
     function removeOracle(address _oracle) override public onlyOwner {
         require(hasRole(ORACLE, _oracle), "LSS: Not Oracle");
         revokeRole(ORACLE, _oracle);
-        emit NewOracleRemoved(_oracle);
+        emit NewOracleRemoval(_oracle);
     }
 
     /// @notice This function sets the new subscription fee
@@ -81,7 +81,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     }
 
     /// @notice This function sets the subscription token
-    /// @param _token token for subscribe
+    /// @param _token token used for subscription
     function setSubscriptionToken(IERC20 _token) override public onlyOwner {
         require(subToken != _token, "LSS: Cannot set same token");
         subToken = _token;
@@ -90,9 +90,9 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
 
     // --- RISK MANAGEMENT ---
 
-    /// @notice This function sets the risk scorefor an address
-    /// @param _addresses Lossless Oracle Controller address
-    /// @param _scores Lossless Oracle Controller address
+    /// @notice This function sets the risk score for an address
+    /// @param _addresses Array of addresses to add scores
+    /// @param _scores Risk score assigned to an address
     function setRiskScores(address[] calldata _addresses, uint8[] calldata _scores) override public onlyOracle {
         uint256 listLen = _addresses.length;
 
@@ -122,7 +122,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     }
 
     /// @notice This function returns if an address is subsribed
-    /// @param _address address to verify
+    /// @param _address address to check
     function getIsSubscribed(address _address) override public view returns(bool) {
         if (subFee == 0) {
             return true;
@@ -176,7 +176,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
     }
 
 
-    /// @notice This withdraws all the tokens from previous 
+    /// @notice This function withdraws the tokens coming from subscriptions
     function withdrawTokens() override public onlyOwner returns(uint256) {
         uint256 withdrawPool = 0;
 
