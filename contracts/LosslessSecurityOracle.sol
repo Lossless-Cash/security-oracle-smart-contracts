@@ -154,8 +154,8 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
         emit NewSubscription(_address, _blocks);
     }
 
-    /// @notice This function cancels a subscription
-    /// @param _address address to unsubscribe
+    /// @notice This function extends a subscription
+    /// @param _address address to extend
     function extendSubscription(address _address, uint256 _blocks) override public {
         Subscription storage sub = subscriptions[subNo[_address]];
         require(sub.endingBlock != 0, "LSS: Not subscribed");
