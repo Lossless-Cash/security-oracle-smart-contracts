@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface ILssSecurityOracle {    
+interface ILssSecurityOracle {
     function setSubscriptionFee(uint256 _sub) external;
     function setSubscriptionToken(IERC20 _token) external;
     function addOracle(address _oracle) external;
