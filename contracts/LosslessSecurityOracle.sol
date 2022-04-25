@@ -90,9 +90,9 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
 
     // --- RISK MANAGEMENT ---
 
-    /// @notice This function sets the risk score for an address
+    /// @notice This function sets the risk score for an array of addresses
     /// @param _addresses Array of addresses to add scores
-    /// @param _scores Risk score assigned to an address
+    /// @param _scores Risk scores assigned to the addresses
     function setRiskScores(address[] calldata _addresses, uint8[] calldata _scores) override public onlyOracle {
         uint256 listLen = _addresses.length;
 
@@ -121,7 +121,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
         }
     }
 
-    /// @notice This function returns if an address is subsribed
+    /// @notice This function returns if an address is subscribed
     /// @param _address address to check
     function getIsSubscribed(address _address) override public view returns(bool) {
         if (subFee == 0) {
@@ -156,6 +156,7 @@ contract LosslessSecurityOracle is ILssSecurityOracle, Initializable, ContextUpg
 
     /// @notice This function extends a subscription
     /// @param _address address to extend
+    /// @param _blocks amount of blocks to extend
     function extendSubscription(address _address, uint256 _blocks) override public {
         Subscription storage sub = subscriptions[subNo[_address]];
         require(sub.endingBlock != 0, "LSS: Not subscribed");
