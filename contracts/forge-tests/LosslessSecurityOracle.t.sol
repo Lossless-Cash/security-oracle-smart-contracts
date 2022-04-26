@@ -34,7 +34,7 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice should not revert
     function testSecurityOracleGetRiskSubActive(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
         evm.assume(_getScore < _addresses.length);
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
         
         if (_addresses.length == _scores.length) {
@@ -53,7 +53,7 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice should not revert but return 0
     function testSecurityOracleGetRiskSubExpired(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
         evm.assume(_getScore < _addresses.length);
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
         
         if (_addresses.length == _scores.length) {
@@ -122,7 +122,7 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice should not revert but return 0
     function testSecurityOracleGetRiskSubNone(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
         evm.assume(_getScore < _addresses.length);
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
         
         if (_addresses.length == _scores.length) {
@@ -244,7 +244,7 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @dev Should not revert
     function testSecurityOraclerWithdraw(address _payer, address _sub, uint128 _blocks) public notZero(_payer) notZero(_sub) notOwner(_payer){
 
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
@@ -262,7 +262,7 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @dev Should not revert
     function testSecurityOraclerWithdrawMidCycle(address _payer, address _sub, uint128 _blocks) public notZero(_payer) notZero(_sub) notOwner(_payer){
 
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
@@ -279,9 +279,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test subscription extension
     /// @dev Should not revert
     function testSecurityOracleExtendSub(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
+        evm.assume(_extension > 100);
         evm.assume(_extension < type(uint128).max - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
@@ -297,9 +297,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test subscription extension for non subscribed
     /// @dev Should revert
     function testSecurityOracleExtendSubNonSubbed(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
+        evm.assume(_extension > 100);
         evm.assume(_extension < type(uint128).max - 100);
     
        evm.expectRevert("LSS: Not subscribed");
@@ -308,11 +308,11 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
 
     /// @notice Test subscription extension by anyone
     /// @dev Should not revert
-    function testSecurityOracleExtendSubByAnyone(address _payer, address _sub, uint128 _blocks, uint128 _extension, address _extender) public notZero(_payer) notZero(_sub) notOwner(_payer){
+    function testSecurityOracleExtendSubByAnyone(address _payer, address _sub, uint128 _blocks, uint128 _extension, address _extender) public notZero(_extender) notZero(_payer) notZero(_sub) notOwner(_payer){
         evm.assume(_extender != _payer);
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
+        evm.assume(_extension > 100);
         evm.assume(_extension < type(uint128).max - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
@@ -328,9 +328,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test subscription extension multiple times
     /// @dev Should not revert
     function testSecurityOracleExtendSubMultiple(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
+        evm.assume(_extension > 100);
         evm.assume(_extension < type(uint128).max - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
@@ -349,9 +349,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test withdraw before and after extension
     /// @dev Should not revert
     function testSecurityOracleExtendSubWithdrawing(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
+        evm.assume(_extension > 100);
         evm.assume(_extension < type(uint128).max - 100);
 
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
@@ -378,9 +378,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test withdraw before and after extension with fee change
     /// @dev Should not revert
     function testSecurityOracleExtendSubWithdrawing(address _payer, address _sub, uint128 _blocks, uint128 _extension, uint128 _newFee) public notZero(_payer) notZero(_sub) notOwner(_payer){
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
+        evm.assume(_extension > 100);
         evm.assume(_extension < type(uint128).max - 100);
         evm.assume(_newFee != subscriptionFee);
         evm.assume(_newFee > 0);
@@ -421,9 +421,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test subscription extension with zero fee
     /// @dev Should not revert
     function testSecurityOracleExtendSubZeroFee(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer) zeroFee() {
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
+        evm.assume(_extension > 100);
         evm.assume(_extension < type(uint128).max - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
@@ -438,11 +438,11 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
 
     /// @notice Test subscription extension by anyone with zero fee
     /// @dev Should not revert
-    function testSecurityOracleExtendSubByAnyoneZeroFee(address _payer, address _sub, uint128 _blocks, uint128 _extension, address _extender) public notZero(_payer) notZero(_sub) notOwner(_payer) zeroFee() {
+    function testSecurityOracleExtendSubByAnyoneZeroFee(address _payer, address _sub, uint128 _blocks, uint128 _extension, address _extender) public notZero(_extender) notZero(_payer) notZero(_sub) notOwner(_payer) zeroFee() {
         evm.assume(_extender != _payer);
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
+        evm.assume(_extension > 100);
         evm.assume(_extension < type(uint128).max - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
@@ -458,9 +458,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test subscription extension multiple times with zero fee
     /// @dev Should not revert
     function testSecurityOracleExtendSubMultipleZeroFee(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer) zeroFee() {
-        evm.assume(_blocks > 10);
+        evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
-        evm.assume(_extension > 0);
+        evm.assume(_extension > 100);
         evm.assume(_extension < type(uint128).max - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
