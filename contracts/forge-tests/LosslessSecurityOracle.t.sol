@@ -329,9 +329,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @dev Should not revert
     function testSecurityOracleExtendSubMultiple(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer){
         evm.assume(_blocks > 100);
-        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_blocks < type(uint128).max / 2 - 100);
         evm.assume(_extension > 100);
-        evm.assume(_extension < type(uint128).max - 100);
+        evm.assume(_extension < type(uint128).max / 2 - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
 
@@ -441,9 +441,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     function testSecurityOracleExtendSubByAnyoneZeroFee(address _payer, address _sub, uint128 _blocks, uint128 _extension, address _extender) public notZero(_extender) notZero(_payer) notZero(_sub) notOwner(_payer) zeroFee() {
         evm.assume(_extender != _payer);
         evm.assume(_blocks > 100);
-        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_blocks < type(uint128).max / 2  - 100);
         evm.assume(_extension > 100);
-        evm.assume(_extension < type(uint128).max - 100);
+        evm.assume(_extension < type(uint128).max / 2 - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
 
@@ -459,9 +459,9 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @dev Should not revert
     function testSecurityOracleExtendSubMultipleZeroFee(address _payer, address _sub, uint128 _blocks, uint128 _extension) public notZero(_payer) notZero(_sub) notOwner(_payer) zeroFee() {
         evm.assume(_blocks > 100);
-        evm.assume(_blocks < type(uint128).max - 100);
+        evm.assume(_blocks < type(uint128).max / 2 - 100);
         evm.assume(_extension > 100);
-        evm.assume(_extension < type(uint128).max - 100);
+        evm.assume(_extension < type(uint128).max / 2 - 100);
         uint256 subAmount = generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
 
