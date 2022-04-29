@@ -162,33 +162,6 @@ contract LosslessSecurityOracle is
         require(_address != address(0), "LSS: Cannot sub zero address");
         
         Subscription storage sub = subscriptions[_address];
-        require(sub.endingBlock == 0, "LSS: Already subscribed, extend");
-
-        uint256 amountToPay = _blocks * subFee;
-
-        sub.endingBlock = block.number + _blocks;
-        sub.amount = amountToPay;
-
-        TransferHelper.safeTransferFrom(
-            address(subToken),
-            msg.sender,
-            address(this),
-            amountToPay
-        );
-
-        emit NewSubscription(_address, _blocks);
-    }
-
-    /// @notice This function extends a subscription
-    /// @param _address address to extend
-    /// @param _blocks amount of blocks to extend
-    function extendSubscription(address _address, uint256 _blocks)
-        public
-        override
-    {
-        require(_blocks > 0, "LSS: Zero blocks is invalid");
-        Subscription storage sub = subscriptions[_address];
-        require(sub.endingBlock != 0, "LSS: Not subscribed");
 
         uint256 amountToPay = _blocks * subFee;
 
@@ -207,7 +180,7 @@ contract LosslessSecurityOracle is
             amountToPay
         );
 
-        emit NewSubscriptionExtension(_address, _blocks);
+        emit NewSubscription(_address, _blocks);
     }
 
     /// @notice This function withdraws the tokens coming from subscriptions
