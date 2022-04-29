@@ -12,7 +12,6 @@ interface ILssSecurityOracle {
     function withdrawTokens() external returns(uint256);
 
     function subscribe(address _address, uint256 _blocks) external;
-    function extendSubscription(address _address, uint256 _blocks) external;
 
     function getIsSubscribed(address _address) external view returns(bool);
     function getRiskScore(address _address) external returns (uint8);
