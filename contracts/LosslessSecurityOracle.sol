@@ -158,6 +158,7 @@ contract LosslessSecurityOracle is
     /// @param _address address to subscribe
     /// @param _blocks amount of blocks to subscribe
     function subscribe(address _address, uint256 _blocks) public override {
+        require(_blocks > 0, "LSS: Zero blocks is invalid");
         require(_address != address(0), "LSS: Cannot sub zero address");
         
         Subscription storage sub = subscriptions[_address];
@@ -185,6 +186,7 @@ contract LosslessSecurityOracle is
         public
         override
     {
+        require(_blocks > 0, "LSS: Zero blocks is invalid");
         Subscription storage sub = subscriptions[_address];
         require(sub.endingBlock != 0, "LSS: Not subscribed");
 
