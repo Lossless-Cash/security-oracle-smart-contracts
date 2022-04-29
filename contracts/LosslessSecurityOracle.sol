@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -39,7 +39,10 @@ contract LosslessSecurityOracle is
         uint256 _subscription,
         IERC20 _subToken
     ) public initializer {
-        __Ownable_init();
+        __Context_init_unchained();
+        __Pausable_init_unchained();
+        __Ownable_init_unchained();
+        __AccessControl_init_unchained();
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         setSubscriptionFee(_subscription);
         setSubscriptionToken(_subToken);
