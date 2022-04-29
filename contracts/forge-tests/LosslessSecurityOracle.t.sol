@@ -181,12 +181,19 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test set risk scores
     /// @dev Should not revert
     function testSecurityOraclerSetRiskScores(address[] memory _addresses, uint8[] memory _scores) public zeroFee() {
+
         evm.startPrank(oracle);
         if (_addresses.length == _scores.length) {
             securityOracle.setRiskScores(_addresses, _scores);
             
             for (uint256 i; i < _addresses.length; i++) {
-                assertEq(securityOracle.getRiskScore(_addresses[i]), _scores[i]);
+                uint256 lastOcurrence;
+                for (uint256 n; n < _addresses.length; n++) {
+                    if (_addresses[i] == _addresses[n]) {
+                        lastOcurrence = _scores[n];
+                    }
+                }
+                assertEq(securityOracle.getRiskScore(_addresses[i]), lastOcurrence);
             }
         }
         evm.stopPrank();
