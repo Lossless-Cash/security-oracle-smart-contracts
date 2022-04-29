@@ -166,15 +166,15 @@ contract LosslessSecurityOracle is
 
         uint256 amountToPay = _blocks * subFee;
 
+        sub.endingBlock = block.number + _blocks;
+        sub.amount = amountToPay;
+
         TransferHelper.safeTransferFrom(
             address(subToken),
             msg.sender,
             address(this),
             amountToPay
         );
-
-        sub.endingBlock = block.number + _blocks;
-        sub.amount = amountToPay;
 
         emit NewSubscription(_address, _blocks);
     }
@@ -192,13 +192,6 @@ contract LosslessSecurityOracle is
 
         uint256 amountToPay = _blocks * subFee;
 
-        TransferHelper.safeTransferFrom(
-            address(subToken),
-            msg.sender,
-            address(this),
-            amountToPay
-        );
-
         if (block.number <= sub.endingBlock) {
             sub.endingBlock += _blocks;
         } else {
@@ -206,6 +199,13 @@ contract LosslessSecurityOracle is
         }
 
         sub.amount += amountToPay;
+
+        TransferHelper.safeTransferFrom(
+            address(subToken),
+            msg.sender,
+            address(this),
+            amountToPay
+        );
 
         emit NewSubscriptionExtension(_address, _blocks);
     }
