@@ -147,8 +147,9 @@ contract LosslessSecurityOracle is
     {
         if (subFee == 0) {
             return true;
+        } else {
+            return (block.number <= subscriptions[_address].endingBlock);
         }
-        return (block.number <= subscriptions[_address].endingBlock);
     }
 
     // --- SUBSCRIPTIONS ---
