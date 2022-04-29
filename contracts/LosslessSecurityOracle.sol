@@ -133,11 +133,8 @@ contract LosslessSecurityOracle is
         override
         returns (uint8)
     {
-        if (!getIsSubscribed(msg.sender)) {
-            return 0;
-        } else {
-            return riskScores[_address];
-        }
+        require(!getIsSubscribed(msg.sender), "LSS: Not subscribed");
+        return riskScores[_address];
     }
 
     /// @notice This function returns if an address is subscribed
