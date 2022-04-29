@@ -71,7 +71,6 @@ contract LosslessSecurityOracle is
     function addOracle(address _oracle) public override onlyOwner {
         require(!hasRole(ORACLE, _oracle), "LSS: Cannot set same address");
         grantRole(ORACLE, _oracle);
-        emit NewOracle(_oracle);
     }
 
     /// @notice This function removes an oracle
@@ -79,7 +78,6 @@ contract LosslessSecurityOracle is
     function removeOracle(address _oracle) public override onlyOwner {
         require(hasRole(ORACLE, _oracle), "LSS: Not Oracle");
         revokeRole(ORACLE, _oracle);
-        emit NewOracleRemoval(_oracle);
     }
 
     /// @notice This function sets the new subscription fee
