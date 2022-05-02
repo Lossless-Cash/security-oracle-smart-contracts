@@ -99,23 +99,15 @@ contract LosslessSecurityOracle is
     // --- RISK MANAGEMENT ---
 
     /// @notice This function sets the risk score for an array of addresses
-    /// @param _addresses Array of addresses to add scores
-    /// @param _scores Risk scores assigned to the addresses
-    function setRiskScores(
-        address[] calldata _addresses,
-        uint8[] calldata _scores
-    ) public override onlyOracle {
-        uint256 listLen = _addresses.length;
+    /// @param newScores Array of new addresses with scores using the RiskScores struct
+    function setRiskScores(RiskScores[] calldata newScores) public onlyOracle {
+        uint256 arrayLen = newScores.length;
+        for (uint256 i = 0; i < arrayLen;i++) {
+            RiskScores memory scores = newScores[i];
 
-        require(listLen == _scores.length, "LSS: Arrays do not match");
+            riskScores[scores.addr] = scores.score;
 
-        for (uint256 i = 0; i < listLen;i++) {
-            address updatedAddress = _addresses[i];
-            uint8 updatedScore = _scores[i];
-
-            riskScores[updatedAddress] = updatedScore;
-
-            emit NewRiskScore(updatedAddress, updatedScore);
+            emit NewRiskScore(scores.addr, scores.score);
         }
     }
 

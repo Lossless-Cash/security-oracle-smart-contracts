@@ -2,8 +2,11 @@
 pragma solidity ^0.8.10;
 
 import "./utils/LosslessDevEnvironment.t.sol";
+import "../interfaces/ILosslessSecurityOracle.sol";
 
 contract LosslessSecurityOracleTests is LosslessDevEnvironment {
+
+    mapping(address => uint8) public riskScores;
 
     modifier zeroFee(){
         evm.prank(securityOwner);
@@ -13,11 +16,11 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     }
 
     /// @notice Generate risk scores and sub
-    function setUpStartingPoint(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, bool _subbed) public {
+    function setUpStartingPoint(address _payer, address _sub, uint128 _blocks, RiskScores[] calldata newScores, bool _subbed) public {
         // Set risk scores
         evm.assume(_blocks > 100);
         evm.startPrank(oracle);
-        securityOracle.setRiskScores(_addresses, _scores);
+        securityOracle.setRiskScores(newScores);
         evm.stopPrank();
 
         if (_subbed) {
@@ -28,38 +31,47 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
 
     /// @notice Test getting risk scores with subscription
     /// @notice should not revert
-    function testSecurityOracleGetRiskSubActive(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
-        evm.assume(_getScore < _addresses.length);
+    function testSecurityOracleGetRiskSubActive(address _payer, address _sub, uint128 _blocks, RiskScores[] calldata newScores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
+        evm.assume(newScores.length > 0);
         evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
         
-        if (_addresses.length == _scores.length) {
-            setUpStartingPoint(_payer, _sub, _blocks, _addresses, _scores, true);
-            
-            evm.roll(5);
-            evm.startPrank(_sub);
-            uint8 riskScore = securityOracle.getRiskScore(_addresses[_getScore]);
+        setUpStartingPoint(_payer, _sub, _blocks, newScores, true);
 
-            assertEq(riskScore, _scores[_getScore]);
-            evm.stopPrank();
+        for (uint i; i < newScores.length; i++) {
+            riskScores[newScores[i].addr] = newScores[i].score;
         }
+
+        evm.roll(5);
+        evm.startPrank(_sub);
+
+        for (uint i; i < newScores.length; i++) {
+            address addressToCheck = newScores[i].addr;
+            uint8 riskScore = securityOracle.getRiskScore(addressToCheck);
+
+            assertEq(riskScore, riskScores[addressToCheck]);
+        }
+        evm.stopPrank();
     }
 
     /// @notice Test getting risk scores subscription expired
     /// @notice should not revert but return 0
-    function testSecurityOracleGetRiskSubExpired(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
-        evm.assume(_getScore < _addresses.length);
+    function testSecurityOracleGetRiskSubExpired(address _payer, address _sub, uint128 _blocks, RiskScores[] calldata newScores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
+        
         evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
         
-        if (_addresses.length == _scores.length) {
-            setUpStartingPoint(_payer, _sub, _blocks, _addresses, _scores, true);
-            
-            evm.roll(_blocks + 1);
-            evm.startPrank(_sub);
-            uint8 riskScore = securityOracle.getRiskScore(_addresses[_getScore]);
-            evm.stopPrank();
+        setUpStartingPoint(_payer, _sub, _blocks, newScores, true);
+        
+        evm.roll(_blocks + 1);
+        evm.startPrank(_sub);
+
+        for (uint i; i < newScores.length; i++) {
+            uint8 riskScore = securityOracle.getRiskScore(newScores[i].addr);
+
+            assertEq(riskScore, 0);
         }
+        evm.stopPrank();
     }
 
 
@@ -114,21 +126,22 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
 
     /// @notice Test getting risk scores without subscription
     /// @notice should revert
-    function testSecurityOracleGetRiskSubNone(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
-        evm.assume(_getScore < _addresses.length);
+    function testSecurityOracleGetRiskSubNone(address _payer, address _sub, uint128 _blocks, RiskScores[] calldata newScores, uint256 _getScore) public notZero(_payer) notZero(_sub) {
+        
         evm.assume(_blocks > 100);
         evm.assume(_blocks < type(uint128).max - 100);
         
-        if (_addresses.length == _scores.length) {
-            setUpStartingPoint(_payer, _sub, _blocks, _addresses, _scores, false);
-            
-            evm.roll(5);
-            evm.startPrank(_sub);
-            
-            uint8 riskScore = securityOracle.getRiskScore(_addresses[_getScore]);
+        setUpStartingPoint(_payer, _sub, _blocks, newScores, false);
+        
+        evm.roll(5);
+        evm.startPrank(_sub);
+        
+        for (uint i; i < newScores.length; i++) {
+            uint8 riskScore = securityOracle.getRiskScore(newScores[i].addr);
+
             assertEq(riskScore, 0);
-            evm.stopPrank();
         }
+        evm.stopPrank();
     }
 
     /// @notice Test Subscription Fee Set up
@@ -181,44 +194,20 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
 
     /// @notice Test set risk scores
     /// @dev Should not revert
-    function testSecurityOraclerSetRiskScores(address[] memory _addresses, uint8[] memory _scores) public zeroFee() {
+    function testSecurityOraclerSetRiskScores(RiskScores[] calldata newScores) public zeroFee() {
 
         evm.startPrank(oracle);
-        if (_addresses.length == _scores.length) {
-            securityOracle.setRiskScores(_addresses, _scores);
-            
-            for (uint256 i; i < _addresses.length; i++) {
-                uint256 lastOcurrence;
-                for (uint256 n; n < _addresses.length; n++) {
-                    if (_addresses[i] == _addresses[n]) {
-                        lastOcurrence = _scores[n];
-                    }
-                }
-                assertEq(securityOracle.getRiskScore(_addresses[i]), lastOcurrence);
-            }
-        }
-        evm.stopPrank();
-    }
+        securityOracle.setRiskScores(newScores);
 
-    /// @notice Test set risk scores unmatching arrays
-    /// @dev Should revert
-    function testSecurityOraclerSetRiskScoresUnmatchingArrays(address[] memory _addresses, uint8[] memory _scores) public {
-        evm.startPrank(oracle);
-        if (_addresses.length != _scores.length) {
-            evm.expectRevert("LSS: Arrays do not match");
-            securityOracle.setRiskScores(_addresses, _scores);
-        }
         evm.stopPrank();
     }
 
     /// @notice Test set risk scores non oracle
     /// @dev Should revert
-    function testSecurityOraclerSetRiskScoresNonOracle(address[] memory _addresses, uint8[] memory _scores) public {
+    function testSecurityOraclerSetRiskScoresNonOracle(RiskScores[] calldata newScores) public {
         evm.startPrank(address(9999));
-        if (_addresses.length == _scores.length) {
-            evm.expectRevert("LSS: Only Oracle Controller");
-            securityOracle.setRiskScores(_addresses, _scores);
-        }
+        evm.expectRevert("LSS: Only Oracle Controller");
+        securityOracle.setRiskScores(newScores);
         evm.stopPrank();
     }
 
