@@ -15,6 +15,7 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Generate risk scores and sub
     function setUpStartingPoint(address _payer, address _sub, uint128 _blocks, address[] memory _addresses, uint8[] memory _scores, bool _subbed) public {
         // Set risk scores
+        evm.assume(_blocks > 100);
         evm.startPrank(oracle);
         securityOracle.setRiskScores(_addresses, _scores);
         evm.stopPrank();
@@ -173,6 +174,7 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test subscription
     /// @dev Should not revert
     function testSecurityOraclerSubscription(address _payer, address _sub, uint128 _blocks) public notZero(_payer) notZero(_sub){
+        evm.assume(_blocks > 100);
         generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
     }
@@ -381,6 +383,7 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @notice Test subscription with zero fee
     /// @dev Should not revert
     function testSecurityOraclerSubscriptionZeroFee(address _payer, address _sub, uint128 _blocks) public notZero(_payer) notZero(_sub) zeroFee() {
+        evm.assume(_blocks > 100);
         generateSubscription(_payer, _sub, _blocks);
         assert(securityOracle.getIsSubscribed(_sub));
     }
