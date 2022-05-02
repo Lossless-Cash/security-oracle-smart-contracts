@@ -109,17 +109,13 @@ contract LosslessSecurityOracle is
 
         require(listLen == _scores.length, "LSS: Arrays do not match");
 
-        for (uint256 i = 0; i < listLen; ) {
+        for (uint256 i = 0; i < listLen;i++) {
             address updatedAddress = _addresses[i];
             uint8 updatedScore = _scores[i];
 
             riskScores[updatedAddress] = updatedScore;
 
             emit NewRiskScore(updatedAddress, updatedScore);
-
-            unchecked {
-                i++;
-            }
         }
     }
 
@@ -133,8 +129,11 @@ contract LosslessSecurityOracle is
         override
         returns (uint8)
     {
-        require(getIsSubscribed(msg.sender), "LSS: Not subscribed");
-        return riskScores[_address];
+        if (!getIsSubscribed(msg.sender)) {
+            return 0;
+        } else {
+            return riskScores[_address];
+        }
     }
 
     /// @notice This function returns if an address is subscribed

@@ -56,7 +56,6 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
             
             evm.roll(_blocks + 1);
             evm.startPrank(_sub);
-            evm.expectRevert("LSS: Not subscribed");
             uint8 riskScore = securityOracle.getRiskScore(_addresses[_getScore]);
             evm.stopPrank();
         }
@@ -125,8 +124,8 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
             evm.roll(5);
             evm.startPrank(_sub);
             
-            evm.expectRevert("LSS: Not subscribed");
-            securityOracle.getRiskScore(_addresses[_getScore]);
+            uint8 riskScore = securityOracle.getRiskScore(_addresses[_getScore]);
+            assertEq(riskScore, 0);
             evm.stopPrank();
         }
     }
