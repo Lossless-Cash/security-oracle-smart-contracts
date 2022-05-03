@@ -83,7 +83,6 @@ contract LosslessSecurityOracle is
     /// @notice This function sets the new subscription fee
     /// @param _sub token amount per block
     function setSubscriptionFee(uint256 _sub) public override onlyOwner {
-        require(subFee != _sub, "LSS: Cannot set same amount");
         subFee = _sub;
         emit NewSubscriptionFee(subFee);
     }
@@ -91,7 +90,6 @@ contract LosslessSecurityOracle is
     /// @notice This function sets the subscription token
     /// @param _token token used for subscription
     function setSubscriptionToken(IERC20 _token) public override onlyOwner {
-        require(subToken != _token, "LSS: Cannot set same token");
         subToken = _token;
         emit NewSubscriptionToken(subToken);
     }
