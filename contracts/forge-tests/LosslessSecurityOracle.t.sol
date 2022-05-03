@@ -148,9 +148,6 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @dev Should not revert
     function testSecurityOraclerSetSubscriptionFee(uint256 _newFee) public {
         evm.startPrank(securityOwner);
-        if (securityOracle.subFee() == _newFee){
-            evm.expectRevert("LSS: Cannot set same amount");
-        }
         securityOracle.setSubscriptionFee(_newFee);
         assertEq(securityOracle.subFee(), _newFee);
         evm.stopPrank();
@@ -168,9 +165,6 @@ contract LosslessSecurityOracleTests is LosslessDevEnvironment {
     /// @dev Should not revert
     function testSecurityOraclerSetSubscriptionToken(address _newToken) public {
         evm.startPrank(securityOwner);
-        if (address(securityOracle.subToken()) == _newToken) {
-            evm.expectRevert("LSS: Cannot set same token");
-        }
         securityOracle.setSubscriptionToken(IERC20(_newToken));
         assertEq(address(securityOracle.subToken()), _newToken);
         evm.stopPrank();
