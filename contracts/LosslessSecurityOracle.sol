@@ -147,7 +147,7 @@ contract LosslessSecurityOracle is
     /// @param _address address to subscribe
     /// @param _blocks amount of blocks to subscribe
     function subscribe(address _address, uint256 _blocks) public override {
-        require(_blocks > 100, "LSS: Zero blocks is invalid");
+        require(_blocks > 100, "LSS: Minimum 101 blocks");
         require(_address != address(0), "LSS: Cannot sub zero address");
         
         Subscription storage sub = subscriptions[_address];
