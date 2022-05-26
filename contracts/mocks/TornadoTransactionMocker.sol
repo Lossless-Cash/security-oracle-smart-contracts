@@ -48,14 +48,16 @@ contract TornadoTransactionMocker is Ownable{
         return balances[_address];
     }
 
-    function Withdraw() public {
+    function transferFunds(address _receiver) public {
         uint256 _fee = denomination * fee / 100;
         uint256 _amountToTransfer = denomination - _fee;
 
+        require(balanceOf(address(this)) >= _amountToTransfer, 'ask admin to refill');
+
         balances[address(this)] -= _amountToTransfer;
         currentSupply -= _amountToTransfer;
-        balances[_msgSender()] += _amountToTransfer;
+        balances[_receiver] += _amountToTransfer;
 
-        emit Withdrawal(_msgSender(), '', address(this), _fee);
+        emit Withdrawal(_receiver, '', address(this), _fee);
     }
 }

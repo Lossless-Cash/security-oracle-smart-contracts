@@ -6,12 +6,11 @@ import "./utils/LosslessDevEnvironment.t.sol";
 
 contract TornadoTransactionMockerTests is LosslessDevEnvironment {
 
-    function testTornadoWithdrawal(address _withdrawer) public {
+    function testTornadoRouterWithdraw(address _withdrawer) public {
         evm.assume(_withdrawer != mockerOwner);
         evm.assume(_withdrawer != address(0));
         evm.prank(_withdrawer);
-        tornadoMocker.Withdraw();
-
+        tornadoRouter.withdraw();
         assertEq(tornadoMocker.balanceOf(_withdrawer), mockerNetWithdraw);
     }
 
@@ -21,7 +20,7 @@ contract TornadoTransactionMockerTests is LosslessDevEnvironment {
 
         evm.startPrank(_withdrawer);
         for (uint i; i < 99; i++) {
-            tornadoMocker.Withdraw();
+            tornadoRouter.withdraw();
         }
         evm.stopPrank();
 
