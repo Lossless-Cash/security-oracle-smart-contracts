@@ -19,4 +19,12 @@ contract EnvironmentTests is LosslessDevEnvironment {
         assertEq(securityOracle.subFee(), subscriptionFee);
         assertEq(address(securityOracle.subToken()), address(erc20Token));
     }
+
+    /// @notice Test deployed Tornado Mocker
+    function testTornadoMockerSetUp() public {
+        assertEq(tornadoMocker.owner(), mockerOwner);
+        assertEq(tornadoMocker.fee(), mockerFee);
+        assertEq(tornadoMocker.denomination(), mockerDenomination);
+        assertEq(tornadoMocker.symbol(), mockerSymbol);
+    }
 }
